@@ -28,10 +28,7 @@ const userschema=new mongoose.Schema({
         type: Boolean,
         default: false,
       },
-      cart: {
-        type: Array,
-        default: [],
-      },
+     
 })
 const User=mongoose.model("User",userschema)
 module.exports=User

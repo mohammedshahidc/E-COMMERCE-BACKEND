@@ -3,8 +3,8 @@ const Joi = require('joi');
 const user_joiSchema = Joi.object({
     username: Joi.string().required(),
     email: Joi.string()
-        .email()
-        .required(),
+        .email(),
+        
     password: Joi.string()
         .min(4)
         .required(),
@@ -13,4 +13,20 @@ const user_joiSchema = Joi.object({
 
 });
 
-module.exports = user_joiSchema;
+
+const product_joiSchema = Joi.object({
+  name: Joi.string().required(),
+  type: Joi.string().required(),
+  image: Joi.string().uri().required(),
+  price: Joi.number().min(0).required(),
+  description: Joi.string().required(),
+  brand: Joi.string().required(),
+  rating: Joi.number().min(0),
+  reviews: Joi.string()
+});
+
+
+
+
+module.exports = {user_joiSchema,
+                    product_joiSchema};
