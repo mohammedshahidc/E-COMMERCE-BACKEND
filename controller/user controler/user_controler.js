@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken")
 const { user_joiSchema } = require("../../model/validation");
 const Products = require("../../model/product_model")
 const Cart = require("../../model/cart_schema")
+const Wishlist=require("../../model/wishlist_model")
 
 const user_registarion = async (req, res) => {
     const { value, error } = user_joiSchema.validate(req.body);
@@ -112,7 +113,7 @@ const add_toCart = async (req, res) => {
         const { userId, productId } = req.body
         const cart = await Cart.findOne({ user: userId })
         if (cart) {
-            const existing_prooduct = cart.products.find((p) => p.id.equals(productId))
+            const existing_prooduct = cart.products.find((p) => p._id.equals(productId))
             if (existing_prooduct) {
                 existing_prooduct.quantity += 1
             } else {
@@ -133,6 +134,116 @@ const add_toCart = async (req, res) => {
 
 }
 
+//get cart items
+const get_cartItems=async(req,res)=>{
+    console.log(req.body);
+try {
+    const userCart=await Cart.findOne({user:req.params.id}).populate("products.product")
+    console.log(req.user);
+    console.log(userCart);
+    if(!userCart){
+        res.status(401).json("cart items not found")
+    }
+    res.status(200).json(userCart)
+} catch (error) {
+   res.status(400).json({error:error.message}) 
+}
+
+
+}
+
+//uodate cart
+const updateCart=async(req,res)=>{
+    try {
+        
+        const{productId,action}=req.body
+        const cartData=await Cart.findOne({user:req.user.id}).populate("products.product")
+        if(!cartData){
+         return   res.status(401).json("cart data not found")
+        }
+        const productData=cartData.products.find(prod=>prod.product._id.toString()===productId)
+        if(!productData){
+          return  res.status(401).json("product not found in user cart")
+        }
+        if(action==="increment"){
+            productData.quantity+=1
+        }else if(action==="decrement"){
+            if(productData.quantity >1){
+                productData.quantity-=1
+            }
+        }else{
+            res.status(404).json("Invalid action for updating quantity")
+        }
+        await cartData.save()
+        const updatedCart=await Cart.findOne({user:req.user.id}).populate("products.product")
+        res.status(200).json({products:updatedCart.products ||[]})
+        
+    } catch (error) {
+        res.status(400).json({error:error.message})
+    }
+}
+
+const removeFrom_cart=async (req,res)=>{
+    
+    try {
+        const {userId,productId}=req.params
+        
+        const datas=await Cart.findOne({user:userId}).populate("products.product")
+        if(!datas){
+            return res.status(401).json("cart not found");
+
+        }
+        const productIndex=datas.products.findIndex(pro=>pro.productid===productId)
+        datas.products.splice(productIndex,1)
+        await datas.save()
+        res.status(200).json({ message: "Product removed from cart", products: datas.products || [] });
+
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+
+    }
+}
+const clearCart=async (req,res)=>{
+    try {
+        const{userId}=req.params
+        const cart=await Cart.findOne({userId})
+        if(!cart){
+            return res.status(404).json({message:"cart not found"})
+        }
+        cart.products=[]
+        await cart.save()
+        res.status(200).json({message:"cart clear successfully"})
+    } catch (error) {
+        res.status(400).json({error:error.message})
+    }
+}
+
+
+
+const addto_wishlist=async(req,res)=>{
+    try {
+        const{userId,productId}=req.body
+        const wishlist=await Wishlist.findOne({user:userId})
+        if(!wishlist){
+            const newWish=new Wishlist({
+                user:userId,
+                products:[productId]
+            })
+            await newWish.save()
+            return res.status(200).json(newWish)
+        }
+        if(!wishlist.products.includes(productId)){
+            wishlist.products.push(productId)
+            await wishlist.save()
+            return res.status(200).json(wishlist)
+        }
+        res.status(200).json("product already added")
+    } catch (error) {
+        res.status(200).json({error:error.message})
+    }
+}
+
 module.exports = {
     user_registarion,
     get_users,
@@ -140,5 +251,10 @@ module.exports = {
     getall_products,
     getproducts_bycatogory,
     getProduct_ById,
-    add_toCart
+    add_toCart,
+    get_cartItems,
+    updateCart,
+    removeFrom_cart,
+    clearCart,
+    addto_wishlist
 }
