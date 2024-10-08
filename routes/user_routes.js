@@ -16,4 +16,7 @@ routes
 .delete("/user/deletecart/:userId/:productId",user_controller.removeFrom_cart)
 .delete("/user/clearecart/:id",user_controller.clearCart)
 .post("/user/addtowishlist",user_controller.addto_wishlist)
+.delete("/user/removewishlist",user_controller.remove_itemFromwishlist)
+.get("/user/getwishlist",user_controller.get_wishlist)
+.post("/user/createorder",user_controller.createOrder)
 module.exports=routes

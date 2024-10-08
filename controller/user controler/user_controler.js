@@ -5,7 +5,8 @@ const { user_joiSchema } = require("../../model/validation");
 const Products = require("../../model/product_model")
 const Cart = require("../../model/cart_schema")
 const Wishlist=require("../../model/wishlist_model")
-
+const stripe=require("stripe")
+const Order=require("../../model/order_schem")
 const user_registarion = async (req, res) => {
     const { value, error } = user_joiSchema.validate(req.body);
 
@@ -236,13 +237,95 @@ const addto_wishlist=async(req,res)=>{
         if(!wishlist.products.includes(productId)){
             wishlist.products.push(productId)
             await wishlist.save()
-            return res.status(200).json(wishlist)
+            return res.status(200).json({errorCode:0,message:"item added to wishlist",data:wishlist})
         }
         res.status(200).json("product already added")
     } catch (error) {
         res.status(200).json({error:error.message})
     }
 }
+const remove_itemFromwishlist=async(req,res)=>{
+    try {
+        const{userId,productId}=req.body
+        const wishlistData=await Wishlist.findOne({user:userId}).populate("products")
+        if(!wishlistData){
+            return res.status(404).josn("wishlist items not found")
+        }
+        const productIndex=wishlistData.products.find(prod=>prod._id===productId)
+        wishlistData.products.splice(productIndex,1)
+        await wishlistData.save()
+        return res.status(200).json({errorCode:0,message:"item removed from wishlist",data:wishlistData ||[]})
+
+    } catch (error) {
+        res.status(400).json({error:error.message})
+    }
+}
+
+const get_wishlist=async (req,res)=>{
+    try {
+        const {userId}=req.body
+        const wishlist=await Wishlist.findOne({user:userId}).populate("products")
+        if(!wishlist){
+          return  res.status(401).json("user wishlist not found")
+        }
+      return  res.status(200).json({erroCode:0,status:true,data:wishlist})
+
+    } catch (error) {
+        res.status(400).json({error:error.message})
+    }
+}
+const createOrder = async (req, res) => {
+    const { products, userId } = req.body;
+    if (!products || products.length === 0) {
+        return res.status(400).json({ message: "No products found in order" });
+    }
+
+    try {
+        const newOrder = new Order({
+            ...req.body,
+            userId: userId,
+        });
+
+        await newOrder.populate("products.productId", "name price image").execPopulate();
+
+        const hasUnAvailable_products = newOrder.products.some(
+            product => !product.productId || !product.productId.name || !product.productId.price
+        );
+
+        if (hasUnAvailable_products) {
+            return res.status(400).json({ message: "Some products are unavailable" });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+        const lineData = newOrder.products.map((product) => ({
+            price_data: {
+                currency: "inr",
+                product_data: {
+                    name: product.productId.name,
+                    images: [product.productId.image],
+                },
+                unit_amount: product.productId.price * 100, // amount in smallest currency unit
+            },
+            quantity: product.quantity,
+        }));
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            line_items: lineData,
+            mode: "payment",
+            success_url: `${process.env.FRONTEND_URL}/checkout/success/{CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL}/checkout/cancel`,
+        });
+
+        newOrder.sessionId = session.id;
+        await newOrder.save();
+
+        res.status(200).json({ newOrder, id: session.id, client_secret: session.client_secret });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     user_registarion,
@@ -256,5 +339,8 @@ module.exports = {
     updateCart,
     removeFrom_cart,
     clearCart,
-    addto_wishlist
+    addto_wishlist,
+    remove_itemFromwishlist,
+    get_wishlist,
+    createOrder
 }
