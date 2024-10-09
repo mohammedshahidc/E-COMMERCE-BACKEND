@@ -1,19 +1,24 @@
-const jwt=require("jsonwebtoken")
 
-const user_auth=(req,res,next)=>{
-    const token=req.cookies.token
-    if(!token){
-        res.status(404).json({message:"no token"})
+
+const jwt = require("jsonwebtoken");
+
+const user_auth = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(403).json({ message: 'No Token' });
     }
+
     try {
-        const decoded=jwt.verify(token,process.env.JWT_KEY)
-        req.user=decoded
-        if(req.user.admin){
-            res.status(404).json({message:"No role assigned, access denied"})
-        }
-        next()
+        const decoded = jwt.verify(token, process.env.JWT_KEY);
+        req.user = decoded;
+        next();
+
     } catch (error) {
-        res.status(400).json({message:"Invalid token"})
+        return res.status(401).json({ message: 'Invalid Token' });
     }
-}
-module.exports=user_auth
+
+};
+
+module.exports = user_auth;
