@@ -7,7 +7,7 @@ const Cart = require("../../model/cart_schema")
 const Wishlist = require("../../model/wishlist_model")
 const stripe = require("stripe")
 const Order = require("../../model/order_schem")
-
+const mongoose=require("mongoose")
 
 
 const user_registarion = async (req, res) => {
@@ -27,16 +27,6 @@ const user_registarion = async (req, res) => {
     }
 }
 
-
-const get_users = async (req, res) => {
-    try {
-
-        const users = await User.find()
-        res.status(201).json(users)
-    } catch (error) {
-        res.status(401).json({ error: error.message })
-    }
-}
 
 
 const user_login = async (req, res, next) => {
@@ -296,37 +286,36 @@ const createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
         console.log(userId);
-        // Populate the product field correctly
+
         const cart = await Cart.findOne({ user: userId }).populate("products.product");
         console.log("iiii", cart.products.map(i => i));
-        // console.log('lll',cart);
 
         if (!cart) {
             return res.status(400).json({ message: "Cart not found" });
         }
 
-        // Log the populated cart for debugging
+
         console.log('Populated Cart:', JSON.stringify(cart, null, 2));
 
         const totalPrice = Math.round(
             cart.products.reduce((total, item) => {
                 console.log(item);
-                // Check if the product exists
+
                 if (!item.product) {
                     console.log('Product is undefined for item:', item);
                     throw new Error('Product data not available for one or more items in the cart');
                 }
 
-                // Access price and quantity
-                const price = parseFloat(item.product.price); // Ensure price is a valid number
-                const quantity = parseInt(item.quantity); // Ensure quantity is a valid integer
+
+                const price = parseFloat(item.product.price);
+                const quantity = parseInt(item.quantity);
 
                 console.log('Product ID:', item.product._id);
                 console.log('Price:', price);
                 console.log('Quantity:', quantity);
 
                 if (isNaN(price) || isNaN(quantity)) {
-                    throw new Error('Invalid product price or quantity');  // Handle invalid data
+                    throw new Error('Invalid product price or quantity');
                 }
 
                 return total + price * quantity;
@@ -335,21 +324,21 @@ const createOrder = async (req, res) => {
 
         console.log('Total Price:', totalPrice);
 
-        // Create a new order
+        const orderId = new mongoose.Types.ObjectId()
         const newOrder = new Order({
             userId,
             products: cart.products.map((item) => ({
                 productId: item.product._id,
                 quantity: item.quantity
             })),
-            sessionId: 5656,
+            orderId,
             amount: totalPrice,
             paymentStatus: "pending"
         });
 
         const savedOrder = await newOrder.save();
 
-        // Clear the cart after order creation
+
         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
 
         return res.status(200).json({
@@ -365,10 +354,88 @@ const createOrder = async (req, res) => {
 };
 
 
+// order validatiion
+
+const verify_order = async (req, res) => {
+    try {
+        const { sessionId } = req.body
+        const order = await Order.findOne({ sessionId: sessionId })
+        if (!order) {
+            res.status(401).json({ message: "order not found" })
+        }
+        if (order.paymentStatus === "completed") {
+            return res.status(400).json({ message: "product already ordered" })
+        }
+        order.paymentStatus = "completed"
+        order.shoppingStatus = "proccessing"
+        const updatedOrder = await order.save()
+        res.status(200).json({ errorcode: 0, status: true, message: "order verified successfully", data: updatedOrder })
+    } catch (error) {
+        console.log(error);
+        res.status(400).josn({ error: error.message })
+    }
+}
+
+// get all orders
+
+const getAll_orders = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log(userId);
+        const usersOrder = await Order.find({ userId: userId }).populate("products.productId")
+        if (!usersOrder || usersOrder.length === 0) {
+          return  res.status(404).json({ errorCode: 1, message: "orders not found" })
+
+        }
+        res.status(200).json({ errorcode: 0, status: true, data: usersOrder })
+
+
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ erroCode: 2, status: true, message: error })
+    }
+
+}
+
+//ordder cancelation
+
+const order_cancelation=async(req,res)=>{
+try {
+    
+        const Id=req.params.id
+        const orders=await Order.findOne({orderId:Id})
+        if(!orders){
+          return  res.status(404).json({errorCode:1,message:"orders not found"})
+        }
+        if(orders.paymentStatus==="completed"){
+           return res.status(401).json({errorCode:2,message:"can not cancel this order,already paid"})
+        }
+            orders.paymentStatus="cancelled"
+            orders.shoppingStatus="cancelled"
+           await orders.save()
+           res.status(200).json({errorCode:0,status:true,data:orders})
+} catch (error) {
+    console.log(error);
+    res.status(400).json({error:error.message})
+}
+
+}
+
+//user logout
+
+const userlog_out=async(req,res)=>{
+   try {
+    //   res.clearCookie('token')
+    //   res.status(200).json("logout successfully")
+    res.clearCookie("token")
+    res.status(200).json("successfully logout")
+   } catch (error) {
+    res.status(400).json(error)
+   }
+}
 
 module.exports = {
     user_registarion,
-    get_users,
     user_login,
     getall_products,
     getproducts_bycatogory,
@@ -381,5 +448,9 @@ module.exports = {
     addto_wishlist,
     remove_itemFromwishlist,
     get_wishlist,
-    createOrder
+    createOrder,
+    verify_order,
+    getAll_orders,
+    order_cancelation,
+    userlog_out
 }

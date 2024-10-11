@@ -5,7 +5,6 @@ const routes=express.Router()
 
 routes
 .post("/user/register",user_controller.user_registarion)
-.get("/user/getusers",user_controller.get_users)
 .post("/user/login",user_controller.user_login)
 .get("/user/products",user_controller.getall_products)
 .get("/user/productsby/:type",user_controller.getproducts_bycatogory)
@@ -19,4 +18,11 @@ routes
 .delete("/user/removewishlist",user_auth,user_controller.remove_itemFromwishlist)
 .get("/user/getwishlist",user_auth,user_controller.get_wishlist)
 .post("/user/createorder",user_auth,user_controller.createOrder)
+.post("/user/verifyorder",user_controller.verify_order)
+.get("/user/getallorders",user_auth,user_controller.getAll_orders)
+.delete("/user/ordercanceleation/:id",user_auth,user_controller.order_cancelation)
+.post("/user/logOut",user_auth,user_controller.userlog_out)
+
+
+
 module.exports=routes
