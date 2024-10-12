@@ -32,7 +32,7 @@ const product_Schema = new mongoose.Schema({
         max: 5,
     },
     reviews: {
-        type: Number,
+        type: String,
        
     },
 });

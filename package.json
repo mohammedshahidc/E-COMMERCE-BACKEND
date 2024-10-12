@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@hapi/joi": "^17.1.1",
     "@stripe/stripe-js": "^4.7.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",

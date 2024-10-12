@@ -1,6 +1,11 @@
 const express=require("express")
 const User=require("../../model/user_model")
+const Products=require("../../model/product_model")
+const {product_joiSchema}=require("../../model/validation")
+const Joi = require('@hapi/joi');
 
+//admin users controler
+//-------------------------------------------
 const get_allUsers = async (req, res) => {
     try {
 
@@ -62,9 +67,100 @@ const blockUser=async(req,res)=>{
         res.status(400).json({error:error.message})
     }
 }
+
+
+
+
+//admin products controler
+//----------------------------------------------------
+
+
+
+const getAll_products=async(req,res)=>{
+    try {
+        const allProducts=await Products.find()
+        if(!allProducts){
+            return res.status(401).json("porducts not found")
+        }
+        res.status(200).json({errorCode:0,status:true,data:allProducts})
+    } catch (error) {
+        res.status(400).josn({error:error.message})
+    }
+}
+
+
+
+const getProducts_byId=async(req,res)=>{
+    try {
+        const producById=await Products.findById(req.params.id)
+        if(!producById){
+           return res.status(401).json({errorCode:1,message:"porduct not found"})
+        }
+        res.status(200).json({errorCode:0,status:true,data:producById})
+    } catch (error) {
+        res.status(400).json({error:error.message})
+    }
+}
+
+
+
+
+const addProduct=async(req,res)=>{
+    try {
+        const { error, value } = product_joiSchema.validate(req.body);
+        if(error){
+         return   res.status(401).json({errorCode:1,message:error})
+        }
+        const {name,type,image,price,description,brand,rating,reviews}=value
+        const newProduct= new Products(value)
+        await newProduct.save()
+        res.status(200).json({errorCode:0,message:"product added successfully",data:newProduct})
+
+    } catch (error) {
+        res.status(400).json({errorCode:2,message:error.message})
+    }
+}
+
+
+
+const editProduct=async(req,res)=>{
+    try {
+        const {error,value}=product_joiSchema.validate(req.body)
+        const updatedproduct=await Products.findByIdAndUpdate(req.params.id,value,{new:true})
+        if(!updatedproduct){
+            res.status(401).json({errorCode:1,message:error})
+        }
+        res.status(200).json({errorCode:0,message:"product updated successfully",data:updatedproduct})
+        
+    } catch (error) {
+        res.status(400).json({errorCode:2,message:error.message})
+    }
+}
+
+
+
+const deleteProduct=async (req,res)=>{
+    try {
+       const deletedProduct=await Products.findByIdAndDelete(req.params.id)
+       if(!deleteProduct){
+        res.status(401).json({errorCode:1,message:"product not found"})
+       } 
+       res.status(200).json({errorCode:0,message:"product deleted successfully",data:deleteProduct})
+    } catch (error) {
+        res.status(400).json({errorCode:2,message:error.message})
+    }
+}
+
+
+
 module.exports={
     get_allUsers,
     delete_user,
     getUser_byId,
-    blockUser
+    blockUser,
+    getAll_products,
+    getProducts_byId,
+    addProduct,
+    editProduct,
+    deleteProduct
 }
