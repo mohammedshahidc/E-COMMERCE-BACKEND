@@ -3,7 +3,7 @@ const User=require("../../model/user_model")
 const Products=require("../../model/product_model")
 const {product_joiSchema}=require("../../model/validation")
 const Joi = require('@hapi/joi');
-
+const Orders=require("../../model/order_schem")
 //admin users controler
 //-------------------------------------------
 const get_allUsers = async (req, res) => {
@@ -153,6 +153,81 @@ const deleteProduct=async (req,res)=>{
 
 
 
+
+//order controler
+//-----------------------------------------------------------------------
+
+
+
+const getAll_orders=async(req,res)=>{
+    try {
+        const all_orders=await Orders.find()
+        if(!all_orders){
+            return  res.status(401).json({errorCode:1,message:"orders not found"})
+        }
+        res.status(200).json({errorCode:0,data:all_orders})
+    } catch (error) {
+        res.status(400).json({errorCode:2,message:error.message})
+    }
+}
+
+const getOrder_byuserId=async(req,res)=>{
+    try {
+        const userId=req.params.id
+        const order=await Orders.findOne({userId:userId}).populate("products.productId","name price")
+        console.log(order);
+        if(!order){
+            return  res.status(401).json({errorCode:1,message:"order not found"})
+        }
+        res.status(200).json({errorCode:0,data:order})
+    } catch (error) {
+        res.status(400).json({errorCode:2,message:error.message})  
+    }
+}
+
+
+const cancel_orderByID=async(req,res)=>{
+    try {
+        const order=await Orders.findById(req.params.id)
+        if(!order){
+            return res.status(401).json({errorCode:1,message:"order not found"})
+        }
+        if(order.paymentStatus==="completed"){
+            return res.status(401).json({errorCode:2,message:"cannot cancel this order, all ready paid"})
+
+        }
+        order.paymentStatus="cancelled"
+        order.shoppingStatus="cancelled"
+        await order.save()
+        res.status(200).json({errorCode:0,data:order})
+
+    } catch (error) {
+        res.status(400).json({errorCode:3,message:error.message})  
+ 
+    }
+}
+
+
+
+const totalRevanue=async(req,res)=>{
+    try {
+        const total_revanue=await Orders.aggregate([
+            {$group:{
+                _id:null,
+                totalIncome:{$sum:"$amount"}
+            }}
+        ])
+        if(total_revanue.length>0){
+          return  console.log("total revanue:",total_revanue[0].totalIncome);
+        }
+        res.status(200).json({errorCode:0,data:total_revanue})
+    } catch (error) {
+        res.status(400).json({errorCode:3,message:error.message})  
+
+    }
+}
+
+
 module.exports={
     get_allUsers,
     delete_user,
@@ -162,5 +237,9 @@ module.exports={
     getProducts_byId,
     addProduct,
     editProduct,
-    deleteProduct
+    deleteProduct,
+    getAll_orders,
+    getOrder_byuserId,
+    cancel_orderByID,
+    totalRevanue
 }
