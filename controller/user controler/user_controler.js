@@ -480,8 +480,7 @@ try {
 
 const userlog_out=async(req,res)=>{
    try {
-    //   res.clearCookie('token')
-    //   res.status(200).json("logout successfully")
+    
     res.clearCookie("token")
     res.status(200).json("successfully logout")
    } catch (error) {
