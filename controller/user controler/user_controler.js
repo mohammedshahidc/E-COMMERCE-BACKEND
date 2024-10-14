@@ -8,7 +8,7 @@ const Wishlist = require("../../model/wishlist_model")
 const stripe = require("stripe")
 const Order = require("../../model/order_schem")
 const mongoose=require("mongoose")
-
+const bcrypt=require("bcrypt")
 
 const user_registarion = async (req, res) => {
     const { value, error } = user_joiSchema.validate(req.body);
@@ -17,9 +17,12 @@ const user_registarion = async (req, res) => {
     if (error) {
         throw error
     }
+    if(password !==cpassword){
+        return res.status(400).json("invalid password")
+    }
     try {
-
-        const new_user = new User({ username, email, password, cpassword })
+        const hashPassword=await bcrypt.hash(password,6)
+        const new_user = new User({ username, email, password:hashPassword, cpassword:hashPassword })
         await new_user.save()
         res.status(201).json({ errorcode: 0, status: true, msg: "user created successfully", data: new_user })
     } catch (error) {
@@ -30,52 +33,74 @@ const user_registarion = async (req, res) => {
 
 
 const user_login = async (req, res, next) => {
-    const { value, error } = user_joiSchema.validate(req.body)
-    const { username, password } = value
+    const { value, error } = user_joiSchema.validate(req.body);
+    const { username, password } = value;
+
     if (error) {
-        throw error
+        return res.status(400).json({ error: error.details[0].message });
     }
-    const ADMIN_NAME = process.env.ADMIN_NAME
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
+
+    const ADMIN_NAME = process.env.ADMIN_NAME;
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
     try {
+        
         if (username === ADMIN_NAME && password === ADMIN_PASSWORD) {
-            console.log("admin loged in");
+            console.log("Admin logged in");
             const token = jwt.sign({
                 id: "admin",
                 isAdmin: true
             },
                 process.env.JWT_KEY,
-                {
-                    expiresIn: "1d"
-                }
+                { expiresIn: "1d" }
+            );
 
-            )
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: true,
                 sameSite: "none",
-                maxAge: 24 * 60 * 60 * 1000,
+                maxAge: 24 * 60 * 60 * 1000
             });
+
             return res.status(200).json({ token, isAdmin: true });
         }
-        const user = await User.findOne({ username: username })
 
-        if (!user) { return res.status(200).json({ errorcode: 1, status: true, msg: "user not found", data: null }) }
-        if (user.password !== password) { return res.status(200).json({ errorcode: 2, status: true, msg: "password is incorrect", data: null }) }
-        const token = jwt.sign({ id: user._id, username: user.username, email: user.email }, process.env.JWT_KEY, { expiresIn: "1d" })
+        
+        const user = await User.findOne({ username: username });
+        if (!user) {
+            return res.status(404).json({ errorcode: 1, status: true, msg: "User not found", data: null });
+        }
+
+        const matching = await bcrypt.compare(password, user.password);
+        if (!matching) {
+            return res.status(400).json({ errorcode: 2, status: false, msg: "Password is incorrect", data: null });
+        }
+
+       
+        const token = jwt.sign({
+            id: user._id,
+            username: user.username,
+            email: user.email
+        }, process.env.JWT_KEY, { expiresIn: "1d" });
+
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 24 * 60 * 60 * 1000,
             sameSite: 'strict'
         });
-        console.log("user login");
-        res.status(200).json({ errorcode: 0, status: true, msg: "login successfully", data: token })
+
+        console.log("User logged in");
+        return res.status(200).json({ errorcode: 0, status: true, msg: "Login successful", data: token });
+
     } catch (error) {
-        res.status(401).json({ error: error.message })
+        return res.status(500).json({ error: error.message });
     }
-}
+};
+
+
+//user product controlers
+//-------------------------------------------------------------------------------------
 const getall_products = async (req, res) => {
     try {
         const products = await Products.find(req.body)
@@ -84,6 +109,9 @@ const getall_products = async (req, res) => {
         res.status(400).json({ error: error.message })
     }
 }
+
+
+
 const getproducts_bycatogory = async (req, res) => {
     try {
         const products_bycatogory = await Products.find({ type: req.params.type })
@@ -93,6 +121,9 @@ const getproducts_bycatogory = async (req, res) => {
     }
 
 }
+
+
+
 const getProduct_ById = async (req, res) => {
     try {
         const productsById = await Products.find({ _id: req.params.id })
@@ -106,6 +137,11 @@ const getProduct_ById = async (req, res) => {
         console.log(error)
     }
 }
+
+
+//users cart cantrolers
+//-----------------------------------------------------------------------------------
+
 const add_toCart = async (req, res) => {
 
     try {
@@ -154,7 +190,7 @@ const get_cartItems = async (req, res) => {
 
 }
 
-//uodate cart
+//update cart
 const updateCart = async (req, res) => {
     try {
         const userId = req.user.id
@@ -189,6 +225,8 @@ const updateCart = async (req, res) => {
     }
 }
 
+
+
 const removeFrom_cart = async (req, res) => {
 
     try {
@@ -211,6 +249,10 @@ const removeFrom_cart = async (req, res) => {
 
     }
 }
+
+
+
+
 const clearCart = async (req, res) => {
     try {
         const userId = req.user.id
@@ -226,6 +268,9 @@ const clearCart = async (req, res) => {
     }
 }
 
+
+//users wishlist controlers
+//-------------------------------------------------------------------------------
 
 
 const addto_wishlist = async (req, res) => {
@@ -251,6 +296,9 @@ const addto_wishlist = async (req, res) => {
         res.status(200).json({ error: error.message })
     }
 }
+
+
+
 const remove_itemFromwishlist = async (req, res) => {
     try {
         const userId = req.user.id
@@ -269,6 +317,9 @@ const remove_itemFromwishlist = async (req, res) => {
     }
 }
 
+
+
+
 const get_wishlist = async (req, res) => {
     try {
         const userId = req.user.id
@@ -282,6 +333,9 @@ const get_wishlist = async (req, res) => {
         res.status(400).json({ error: error.message })
     }
 }
+
+
+
 const createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -353,7 +407,8 @@ const createOrder = async (req, res) => {
     }
 };
 
-
+//users order cotrolers
+//-------------------------------------------------------------------------------------------
 // order validatiion
 
 const verify_order = async (req, res) => {
@@ -433,6 +488,8 @@ const userlog_out=async(req,res)=>{
     res.status(400).json(error)
    }
 }
+
+
 
 module.exports = {
     user_registarion,

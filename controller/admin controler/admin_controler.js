@@ -218,9 +218,10 @@ const totalRevanue=async(req,res)=>{
             }}
         ])
         if(total_revanue.length>0){
-          return  console.log("total revanue:",total_revanue[0].totalIncome);
+        //   return  console.log("total revanue:",total_revanue[0].totalIncome);
+        return res.status(200).json({errorCode:0,toalRevanue:total_revanue[0].totalIncome})
         }
-        res.status(200).json({errorCode:0,data:total_revanue})
+        res.status(200).json(total_revanue[0].totalIncome)
     } catch (error) {
         res.status(400).json({errorCode:3,message:error.message})  
 

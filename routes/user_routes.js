@@ -1,6 +1,6 @@
 const express=require("express")
 const user_controller=require("../controller/user controler/user_controler")
-const user_auth = require("../midleware/user_authentication")
+const { user_auth} = require("../midleware/user_authentication")
 const routes=express.Router()
 
 routes
