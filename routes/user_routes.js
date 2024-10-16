@@ -1,6 +1,7 @@
 const express=require("express")
 const user_controller=require("../controller/user controler/user_controler")
 const { user_auth} = require("../midleware/user_authentication")
+const tryCatch=require("../utils/tryCatch")
 const routes=express.Router()
 
 routes
@@ -33,7 +34,7 @@ routes
 //-----------------------------------------------------------------------------
 
 .post("/user/createorder",user_auth,user_controller.createOrder)
-.post("/user/verifyorder",user_controller.verify_order)
+.post("/user/verifyorder",user_auth,user_controller.verify_order)
 .get("/user/getallorders",user_auth,user_controller.getAll_orders)
 .delete("/user/ordercanceleation/:id",user_auth,user_controller.order_cancelation)
 .post("/user/logOut",user_auth,user_controller.userlog_out)

@@ -70,7 +70,7 @@ const user_login = async (req, res, next) => {
         if (!user) {
             return res.status(404).json({ errorcode: 1, status: true, msg: "User not found", data: null });
         }
-
+console.log(user);
         const matching = await bcrypt.compare(password, user.password);
         if (!matching) {
             return res.status(400).json({ errorcode: 2, status: false, msg: "Password is incorrect", data: null });
@@ -103,7 +103,7 @@ const user_login = async (req, res, next) => {
 //-------------------------------------------------------------------------------------
 const getall_products = async (req, res) => {
     try {
-        const products = await Products.find(req.body)
+        const products = await Products.find()
         res.status(200).json(products)
     } catch (error) {
         res.status(400).json({ error: error.message })
@@ -335,6 +335,10 @@ const get_wishlist = async (req, res) => {
 }
 
 
+//users order cotrolers
+//-------------------------------------------------------------------------------------------
+
+
 
 const createOrder = async (req, res) => {
     try {
@@ -407,14 +411,13 @@ const createOrder = async (req, res) => {
     }
 };
 
-//users order cotrolers
-//-------------------------------------------------------------------------------------------
+
 // order validatiion
 
 const verify_order = async (req, res) => {
     try {
-        const { sessionId } = req.body
-        const order = await Order.findOne({ sessionId: sessionId })
+        const { orderId} = req.body
+        const order = await Order.findOne({ orderId: orderId })
         if (!order) {
             res.status(401).json({ message: "order not found" })
         }
