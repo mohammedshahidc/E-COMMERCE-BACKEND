@@ -5,6 +5,7 @@ const user_router=require("./routes/user_routes")
 const admin_routes=require("./routes/admin_routes")
 const  errorManager = require('./midleware/error_handler')
 const customeError = require('./utils/customError')
+const cookieParser=require("cookie-parser")
 const app=express()
 
 mongoose.connect(process.env.MONGO_URI)
@@ -15,6 +16,7 @@ mongoose.connect(process.env.MONGO_URI)
     console.log("failed to connect",Error);
 })
 app.use(express.json())
+app.use(cookieParser())
 app.use("/api",user_router)
 app.use("/api",admin_routes)
 app.all("*",(req,res,next)=>{

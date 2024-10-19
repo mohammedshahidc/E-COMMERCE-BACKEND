@@ -17,11 +17,10 @@ const user_joiSchema = Joi.object({
 const product_joiSchema = Joi.object({
     name: Joi.string().required(),
     type: Joi.string().required(),
-    image: Joi.string().uri().required(),
     price: Joi.number().min(0).required(),
     description: Joi.string().required(),
     brand: Joi.string().required(),
-    rating: Joi.number().min(0),
+    rating: Joi.number().min(0).max(5),
     reviews: Joi.string()
 });
 

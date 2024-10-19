@@ -3,9 +3,10 @@ const admin_controler=require("../controller/admin controler/admin_controler")
 const { getAll_orders } = require("../controller/user controler/user_controler")
 const {admin_auth}=require("../midleware/user_authentication")
 const tryCatch=require('../utils/tryCatch')
+const upload=require("../midleware/upload_midleware")
 const Router=express.Router()
 
-
+console.log("sss",upload.single('image'));
 Router
 
 //user routes
@@ -19,7 +20,7 @@ Router
 //------------------------
 .get("/admin/getallproducts",admin_auth,tryCatch(admin_controler.getAll_products))
 .get("/admin/getproductbyid/:id",admin_auth,tryCatch(admin_controler.getProducts_byId))
-.post("/admin/addproduct",admin_auth,tryCatch(admin_controler.addProduct))
+.post("/admin/addproduct", admin_auth, upload.single('image'), tryCatch(admin_controler.addProduct))
 .put("/admin/editproduct/:id",admin_auth,tryCatch(admin_controler.editProduct))
 .delete("/admin/deleteproduct/:id",admin_auth,tryCatch(admin_controler.deleteProduct))
 

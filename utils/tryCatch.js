@@ -1,9 +1,13 @@
-
-const tryCatch=(controler)=>async(req,res,next)=>{
+const tryCatch = (controller) => async (req, res, next) => {
     try {
-        await controler(req,res,next)
+        console.log('res');
+        console.log('Inside tryCatch');
+        await controller(req, res, next);
     } catch (error) {
-        return next(error)
+        console.log('err');
+        console.error("Error in controller:", error); 
+        return next(error); 
     }
-}
-module.exports=tryCatch
+};
+
+module.exports = tryCatch;

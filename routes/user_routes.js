@@ -6,38 +6,38 @@ const routes=express.Router()
 
 routes
 
-.post("/user/register",user_controller.user_registarion)
-.post("/user/login",user_controller.user_login)
+.post("/user/register",tryCatch(user_controller.user_registarion))
+.post("/user/login",tryCatch(user_controller.user_login))
 //products routes
 //-----------------------------------------------------------------------------
-.get("/user/products",user_controller.getall_products)
-.get("/user/productsby/:type",user_controller.getproducts_bycatogory)
-.get("/user/productsById/:id",user_controller.getProduct_ById)
+.get("/user/products",tryCatch(user_controller.getall_products))
+.get("/user/productsby/:type",tryCatch(user_controller.getproducts_bycatogory))
+.get("/user/productsById/:id",tryCatch(user_controller.getProduct_ById))
 
 //cart routes
 //-----------------------------------------------------------------------------
 
-.post("/user/addtocart",user_auth,user_controller.add_toCart)
-.get("/user/getcart",user_auth,user_controller.get_cartItems)
-.put("/user/updatecart",user_auth,user_controller.updateCart)
-.delete("/user/deletecart/:productId",user_auth,user_controller.removeFrom_cart)
-.delete("/user/clearecart",user_auth,user_controller.clearCart)
+.post("/user/addtocart",user_auth,tryCatch(user_controller.add_toCart))
+.get("/user/getcart",user_auth,tryCatch(user_controller.get_cartItems))
+.put("/user/updatecart",user_auth,tryCatch(user_controller.updateCart))
+.delete("/user/deletecart/:productId",user_auth,tryCatch(user_controller.removeFrom_cart))
+.delete("/user/clearecart",user_auth,tryCatch(user_controller.clearCart))
 
 //wishlist routes
 //-----------------------------------------------------------------------------
 
-.post("/user/addtowishlist",user_auth,user_controller.addto_wishlist)
-.delete("/user/removewishlist",user_auth,user_controller.remove_itemFromwishlist)
-.get("/user/getwishlist",user_auth,user_controller.get_wishlist)
+.post("/user/addtowishlist",user_auth,tryCatch(user_controller.addto_wishlist))
+.delete("/user/removewishlist",user_auth,tryCatch(user_controller.remove_itemFromwishlist))
+.get("/user/getwishlist",user_auth,tryCatch(user_controller.get_wishlist))
 
 //order routes
 //-----------------------------------------------------------------------------
 
-.post("/user/createorder",user_auth,user_controller.createOrder)
-.post("/user/verifyorder",user_auth,user_controller.verify_order)
-.get("/user/getallorders",user_auth,user_controller.getAll_orders)
-.delete("/user/ordercanceleation/:id",user_auth,user_controller.order_cancelation)
-.post("/user/logOut",user_auth,user_controller.userlog_out)
+.post("/user/createorder",user_auth,tryCatch(user_controller.createOrder))
+.post("/user/verifyorder",user_auth,tryCatch(user_controller.verify_order))
+.get("/user/getallorders",user_auth,tryCatch(user_controller.getAll_orders))
+.delete("/user/ordercanceleation/:id",user_auth,tryCatch(user_controller.order_cancelation))
+.post("/user/logOut",user_auth,tryCatch(user_controller.userlog_out))
 
 
 

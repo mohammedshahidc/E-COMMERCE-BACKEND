@@ -38,23 +38,23 @@ const delete_user = async (req, res, next) => {
 }
 
 
-const getUser_byId = async (req, res,next) => {
+const getUser_byId = async (req, res, next) => {
 
     const userId = req.params.id
     const userbyId = await User.findById(userId)
     if (!userbyId) {
-        return next( new customeError("user not founed", 404))
+        return next(new customeError("user not founed", 404))
     }
     res.status(200).json({ errorCode: 0, data: userbyId })
 
 }
 
-const blockUser = async (req, res,next) => {
+const blockUser = async (req, res, next) => {
 
     const userId = req.params.id
     const user = await User.findByIdAndUpdate(userId)
     if (!user) {
-        return next( new customeError("user not found", 404))
+        return next(new customeError("user not found", 404))
     }
     if (user.block === false) {
         user.block = true
@@ -75,11 +75,11 @@ const blockUser = async (req, res,next) => {
 
 
 
-const getAll_products = async (req, res,next) => {
+const getAll_products = async (req, res, next) => {
 
     const allProducts = await Products.find()
     if (!allProducts) {
-        return next (new customeError("product not found", 404))
+        return next(new customeError("product not found", 404))
     }
     res.status(200).json({ errorCode: 0, status: true, data: allProducts })
 
@@ -87,56 +87,57 @@ const getAll_products = async (req, res,next) => {
 
 
 
-const getProducts_byId = async (req, res,next) => {
-    
-        const producById = await Products.findById(req.params.id)
-        if (!producById) {
-            return next( new customeError("product not found",404))
-        }
-        res.status(200).json({ errorCode: 0, status: true, data: producById })
-  
-}
+const getProducts_byId = async (req, res, next) => {
 
-
-
-
-const addProduct = async (req, res,next) => {
-    
-        const { error, value } = product_joiSchema.validate(req.body);
-        if (error) {
-            return next(new customeError(error.message))
-        }
-        const { name, type, image, price, description, brand, rating, reviews } = value
-        const newProduct = new Products(value)
-        await newProduct.save()
-        res.status(200).json({ errorCode: 0, message: "product added successfully", data: newProduct })
+    const producById = await Products.findById(req.params.id)
+    if (!producById) {
+        return next(new customeError("product not found", 404))
+    }
+    res.status(200).json({ errorCode: 0, status: true, data: producById })
 
 }
 
 
 
-const editProduct = async (req, res,next) => {
-   
-        const { error, value } = product_joiSchema.validate(req.body)
-        const updatedproduct = await Products.findByIdAndUpdate(req.params.id, value, { new: true })
-        if (!updatedproduct) {
-           return next (new customeError(error.message))
-        }
-        res.status(200).json({ errorCode: 0, message: "product updated successfully", data: updatedproduct })
 
-    
+const addProduct = async (req, res, next) => {
+    const { error, value } = product_joiSchema.validate(req.body);
+    const image = req.file.path
+    if (error) {
+        return next(new customeError(error.message))
+    }
+
+    const { name, type, price, description, brand, rating, reviews } = value
+    const newProduct = await new Products({ image, name, type, price, description, brand, rating, reviews })
+    await newProduct.save()
+    res.status(200).json({ errorCode: 0, message: "product added successfully", data: newProduct })
+
 }
 
 
 
-const deleteProduct = async (req, res,next) => {
-    
-        const deletedProduct = await Products.findByIdAndDelete(req.params.id)
-        if (!deleteProduct) {
-            return next(new customeError("product not found"))
-        }
-        res.status(200).json({ errorCode: 0, message: "product deleted successfully", data: deleteProduct })
-    
+const editProduct = async (req, res, next) => {
+
+    const { error, value } = product_joiSchema.validate(req.body)
+    const updatedproduct = await Products.findByIdAndUpdate(req.params.id, value, { new: true })
+    if (!updatedproduct) {
+        return next(new customeError(error.message))
+    }
+    res.status(200).json({ errorCode: 0, message: "product updated successfully", data: updatedproduct })
+
+
+}
+
+
+
+const deleteProduct = async (req, res, next) => {
+
+    const deletedProduct = await Products.findByIdAndDelete(req.params.id)
+    if (!deleteProduct) {
+        return next(new customeError("product not found"))
+    }
+    res.status(200).json({ errorCode: 0, message: "product deleted successfully", data: deleteProduct })
+
 }
 
 
@@ -147,45 +148,45 @@ const deleteProduct = async (req, res,next) => {
 
 
 
-const getAll_orders = async (req, res,next) => {
-  
-        const all_orders = await Orders.find()
-        if (!all_orders) {
-            return next(new customeError("order not found",404))
-        }
-        res.status(200).json({ errorCode: 0, data: all_orders })
-    
+const getAll_orders = async (req, res, next) => {
+
+    const all_orders = await Orders.find()
+    if (!all_orders) {
+        return next(new customeError("order not found", 404))
+    }
+    res.status(200).json({ errorCode: 0, data: all_orders })
+
 }
 
-const getOrder_byuserId = async (req, res,next) => {
-   
-        const userId = req.params.id
-        const order = await Orders.findOne({ userId: userId }).populate("products.productId", "name price")
-        console.log(order);
-        if (!order) {
-            return next(new customeError("order not found",404))
-        }
-        res.status(200).json({ errorCode: 0, data: order })
-    
+const getOrder_byuserId = async (req, res, next) => {
+
+    const userId = req.params.id
+    const order = await Orders.findOne({ userId: userId }).populate("products.productId", "name price")
+    console.log(order);
+    if (!order) {
+        return next(new customeError("order not found", 404))
+    }
+    res.status(200).json({ errorCode: 0, data: order })
+
 }
 
 
-const cancel_orderByID = async (req, res,next) => {
-    
-        const order = await Orders.findById(req.params.id)
-        if (!order) {
-            return next(new customeError("order not found",404))
-        }
-        if (order.paymentStatus === "completed") {
-            return next(new customeError( "cannot cancel this order, all ready paid",404))
+const cancel_orderByID = async (req, res, next) => {
 
-        }
-        order.paymentStatus = "cancelled"
-        order.shoppingStatus = "cancelled"
-        await order.save()
-        res.status(200).json({ errorCode: 0, data: order })
+    const order = await Orders.findById(req.params.id)
+    if (!order) {
+        return next(new customeError("order not found", 404))
+    }
+    if (order.paymentStatus === "completed") {
+        return next(new customeError("cannot cancel this order, all ready paid", 404))
 
-    
+    }
+    order.paymentStatus = "cancelled"
+    order.shoppingStatus = "cancelled"
+    await order.save()
+    res.status(200).json({ errorCode: 0, data: order })
+
+
 }
 
 
