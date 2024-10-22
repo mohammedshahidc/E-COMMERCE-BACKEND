@@ -158,6 +158,8 @@ const getAll_orders = async (req, res, next) => {
 
 }
 
+
+
 const getOrder_byuserId = async (req, res, next) => {
 
     const userId = req.params.id
@@ -212,6 +214,15 @@ const totalRevanue = async (req, res) => {
     }
 }
 
+const totalProduct=async(req,res)=>{
+    
+    const products=Products.find()
+    if(!products){
+        return next(new customeError("products not found"))
+    }
+    res.status(200).json((await products).length)
+}
+
 
 module.exports = {
     get_allUsers,
@@ -226,5 +237,6 @@ module.exports = {
     getAll_orders,
     getOrder_byuserId,
     cancel_orderByID,
-    totalRevanue
+    totalRevanue,
+    totalProduct
 }

@@ -6,7 +6,7 @@ const tryCatch=require('../utils/tryCatch')
 const upload=require("../midleware/upload_midleware")
 const Router=express.Router()
 
-console.log("sss",upload.single('image'));
+
 Router
 
 //user routes
@@ -32,7 +32,7 @@ Router
 .get("/admin/getorderbyid/:id",admin_auth,tryCatch(admin_controler.getOrder_byuserId))
 .delete("/admin/cancelorder/:id",admin_auth,tryCatch(admin_controler.cancel_orderByID))
 .get("/admin/calculateincome",admin_auth,admin_controler.totalRevanue)
-
+.get("/admin/allproducts",admin_auth,admin_controler.totalProduct)
 
 
 module.exports=Router
