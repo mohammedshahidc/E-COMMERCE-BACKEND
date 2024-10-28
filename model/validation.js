@@ -10,6 +10,8 @@ const user_joiSchema = Joi.object({
         .required(),
     cpassword: Joi.string()
         .min(4),
+    admin: Joi.boolean().optional(), 
+    block: Joi.boolean().optional() 
 
 });
 

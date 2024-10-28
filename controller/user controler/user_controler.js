@@ -10,14 +10,17 @@ const Order = require("../../model/order_schem")
 const mongoose = require("mongoose")
 const bcrypt = require("bcrypt");
 const customeError = require("../../utils/customError");
+const { id } = require("@hapi/joi/lib/base");
 
 const user_registarion = async (req, res, next) => {
     const { value, error } = user_joiSchema.validate(req.body);
 
     const { username, email, password, cpassword } = value
     if (error) {
+        console.error("Validation error:", error);
         throw error
     }
+    console.log("Passwords:", password, cpassword);
     if (password !== cpassword) {
         return next(new customeError("invalid password", 404))
     }
@@ -25,7 +28,7 @@ const user_registarion = async (req, res, next) => {
     const hashPassword = await bcrypt.hash(password, 6)
     const new_user = new User({ username, email, password: hashPassword, cpassword: hashPassword })
     await new_user.save()
-    res.status(201).json({ errorcode: 0, status: true, msg: "user created successfully", data: new_user })
+    res.status(201).json({ errorcode: 0, status: true, msg: "user created successfully", new_user })
 
 }
 
@@ -51,7 +54,7 @@ const user_login = async (req, res, next) => {
                 isAdmin: true
             },
                 process.env.JWT_KEY,
-                { expiresIn: "30m" }
+                { expiresIn: "1d" }
             );
             const refreshmentToken=jwt.sign({
                 id:"admin",
@@ -64,7 +67,7 @@ const user_login = async (req, res, next) => {
                 httpOnly: true,
                 secure: true,
                 sameSite: "none",
-                maxAge: 30 * 60 * 1000
+                maxAge: 24*30 * 60 * 1000
             });
             res.cookie("refreshmentToken", refreshmentToken, {
                 httpOnly: true,
@@ -91,7 +94,7 @@ const user_login = async (req, res, next) => {
             id: user._id,
             username: user.username,
             email: user.email
-        }, process.env.JWT_KEY, { expiresIn: "30m" });
+        }, process.env.JWT_KEY, { expiresIn: "1d" });
 
         const refreshmentToken=jwt.sign({
             id:user._id,
@@ -104,7 +107,7 @@ const user_login = async (req, res, next) => {
         res.cookie('token', token, {
             httpOnly: true,
             secure: true,
-             maxAge: 30 * 60 * 1000,
+             maxAge: 24 * 30 * 60 * 1000,
             sameSite: 'strict'
         });
         res.cookie('refreshmentToken', refreshmentToken, {
@@ -116,7 +119,7 @@ const user_login = async (req, res, next) => {
 
 
         console.log("User logged in");
-        return res.status(200).json({ errorcode: 0, status: true, msg: "Login successful", data: {token:token,refreshmentToken:refreshmentToken }});
+        return res.status(200).json({ errorcode: 0, status: true, msg: "Login successful",token});
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -194,6 +197,7 @@ const get_cartItems = async (req, res,next) => {
 
    
         const userId = req.user.id
+        console.log('user id=',userId);
         const userCart = await Cart.findOne({ user: userId }).populate("products.product")
 
         if (!userCart) {
@@ -322,7 +326,7 @@ const remove_itemFromwishlist = async (req, res,next) => {
 
 const get_wishlist = async (req, res,next) => {
   
-        const userId = req.user.id
+        const userId = req.user?.id
         const wishlist = await Wishlist.findOne({ user: userId }).populate("products")
         if (!wishlist) {
             return next(new customeError("user wishlist not found",404))
