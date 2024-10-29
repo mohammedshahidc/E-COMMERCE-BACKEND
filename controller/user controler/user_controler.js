@@ -11,6 +11,10 @@ const mongoose = require("mongoose")
 const bcrypt = require("bcrypt");
 const customeError = require("../../utils/customError");
 const { id } = require("@hapi/joi/lib/base");
+const Stripe = require('stripe')
+
+const stripeClient = Stripe(process.env.STRIPE_SECRET_KEY)
+
 
 const user_registarion = async (req, res, next) => {
     const { value, error } = user_joiSchema.validate(req.body);
@@ -342,76 +346,159 @@ const get_wishlist = async (req, res,next) => {
 
 
 
-const createOrder = async (req, res,next) => {
+// const createOrder = async (req, res,next) => {
    
+//         const userId = req.user.id;
+//         console.log(userId);
+
+//         const cart = await Cart.findOne({ user: userId }).populate("products.product");
+//         console.log("iiii", cart.products.map(i => i));
+
+//         if (!cart) {
+//             return next(new customeError("cart data not found",404))
+//         }
+
+
+//         console.log('Populated Cart:', JSON.stringify(cart, null, 2));
+
+//         const totalPrice = Math.round(
+//             cart.products.reduce((total, item) => {
+//                 console.log(item);
+
+//                 if (!item.product) {
+//                     console.log('Product is undefined for item:', item);
+//                     throw next (new customeError('Product data not available for one or more items in the cart',404));
+//                 }
+
+
+//                 const price = parseFloat(item.product.price);
+//                 const quantity = parseInt(item.quantity);
+
+//                 console.log('Product ID:', item.product._id);
+//                 console.log('Price:', price);
+//                 console.log('Quantity:', quantity);
+
+//                 if (isNaN(price) || isNaN(quantity)) {
+//                     throw next(new customeError('Invalid product price or quantity',404));
+//                 }
+
+//                 return total + price * quantity;
+//             }, 0)
+//         );
+
+//         console.log('Total Price:', totalPrice);
+
+//         const orderId = new mongoose.Types.ObjectId()
+//         const newOrder = new Order({
+//             userId,
+//             products: cart.products.map((item) => ({
+//                 productId: item.product._id,
+//                 quantity: item.quantity
+//             })),
+//             orderId,
+//             amount: totalPrice,
+//             paymentStatus: "pending"
+//         });
+
+//         const savedOrder = await newOrder.save();
+
+
+//         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
+
+//         return res.status(200).json({
+//             errorcode: 0,
+//             status: true,
+//             message: "Order created successfully",
+//             data: savedOrder
+//         });
+    
+// };
+
+
+const createOrder = async (req, res, next) => {
+    try {
         const userId = req.user.id;
-        console.log(userId);
+        console.log('User ID:', userId);
 
+        // Retrieve the cart for the user
         const cart = await Cart.findOne({ user: userId }).populate("products.product");
-        console.log("iiii", cart.products.map(i => i));
-
         if (!cart) {
-            return next(new customeError("cart data not found",404))
+            return next(new customeError("Cart data not found", 404));
         }
-
 
         console.log('Populated Cart:', JSON.stringify(cart, null, 2));
 
-        const totalPrice = Math.round(
-            cart.products.reduce((total, item) => {
-                console.log(item);
+        // Calculate total price
+        const totalPrice = cart.products.reduce((total, item) => {
+            if (!item.product) {
+                console.error('Product is undefined for item:', item);
+                throw new customeError('Product data not available for one or more items in the cart', 404);
+            }
 
-                if (!item.product) {
-                    console.log('Product is undefined for item:', item);
-                    throw next (new customeError('Product data not available for one or more items in the cart',404));
-                }
+            const price = parseFloat(item.product.price);
+            const quantity = parseInt(item.quantity);
 
+            if (isNaN(price) || isNaN(quantity)) {
+                throw new customeError('Invalid product price or quantity', 404);
+            }
 
-                const price = parseFloat(item.product.price);
-                const quantity = parseInt(item.quantity);
+            console.log('Calculating:', {
+                productId: item.product._id,
+                price: price,
+                quantity: quantity,
+            });
 
-                console.log('Product ID:', item.product._id);
-                console.log('Price:', price);
-                console.log('Quantity:', quantity);
-
-                if (isNaN(price) || isNaN(quantity)) {
-                    throw next(new customeError('Invalid product price or quantity',404));
-                }
-
-                return total + price * quantity;
-            }, 0)
-        );
+            return total + (price * quantity);
+        }, 0);
 
         console.log('Total Price:', totalPrice);
 
-        const orderId = new mongoose.Types.ObjectId()
+        // Create a Stripe PaymentIntent
+        const paymentIntent = await stripeClient.paymentIntents.create({
+            amount: Math.round(totalPrice * 100), // Convert to cents
+            currency: 'inr', // Use lowercase for currency
+            payment_method_types: ['card'], // Specify payment method
+            
+        });
+
+        // Create a new order
         const newOrder = new Order({
             userId,
             products: cart.products.map((item) => ({
                 productId: item.product._id,
-                quantity: item.quantity
+                quantity: item.quantity,
             })),
-            orderId,
+            orderId: new mongoose.Types.ObjectId(), // Generate a new order ID
             amount: totalPrice,
-            paymentStatus: "pending"
+            paymentStatus: "pending", // Set the payment status to pending
+            paymentIntentId: paymentIntent.id, // Save the PaymentIntent ID for reference
         });
 
+        // Save the new order to the database
         const savedOrder = await newOrder.save();
 
-
+        // Clear the cart after creating the order
         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
 
         return res.status(200).json({
             errorcode: 0,
             status: true,
             message: "Order created successfully",
-            data: savedOrder
+            data: {
+                order: savedOrder,
+                clientSecret: paymentIntent.client_secret, // Send client secret to the frontend for payment
+            },
         });
-    
+    } catch (error) {
+        console.error('Error creating order:', error);
+        return next(new customeError(error.message || "An error occurred while creating the order", 500)); // Pass the error to the error handling middleware
+    }
 };
 
 
 // order validatiion
+
+
 
 const verify_order = async (req, res,next) => {
    
