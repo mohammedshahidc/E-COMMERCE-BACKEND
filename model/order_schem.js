@@ -17,7 +17,7 @@ const orderSchema = new mongoose.Schema({
             quantity: { type: Number, required: true, default: 1 },
         },
     ],
-    orderId: { type: mongoose.Schema.Types.ObjectId },
+    sessionId: { type:String},
     purchaseDate: { type: Date, default: Date.now },
     amount: { type: Number, required: true },
     address: { type: Object },

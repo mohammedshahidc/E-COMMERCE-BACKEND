@@ -11,9 +11,7 @@ const mongoose = require("mongoose")
 const bcrypt = require("bcrypt");
 const customeError = require("../../utils/customError");
 const { id } = require("@hapi/joi/lib/base");
-const Stripe = require('stripe')
-
-const stripeClient = Stripe(process.env.STRIPE_SECRET_KEY)
+const {Stripe} = require('stripe')
 
 
 const user_registarion = async (req, res, next) => {
@@ -79,7 +77,7 @@ const user_login = async (req, res, next) => {
                 sameSite: "none",
                 maxAge: 7 * 24 * 60 * 60 * 1000
             })
-            return res.status(200).json({ token, isAdmin: true });
+            return res.status(200).json({ errorcode: 0, status: true, msg: "admin Login successfully",data:{token:token,name:ADMIN_NAME,isAdmin:true}});
         }
 
 
@@ -123,7 +121,7 @@ const user_login = async (req, res, next) => {
 
 
         console.log("User logged in");
-        return res.status(200).json({ errorcode: 0, status: true, msg: "Login successful",token});
+        return res.status(200).json({ errorcode: 0, status: true, msg: "Login successful",data:{token:token,name:user.username}});
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -174,7 +172,8 @@ const add_toCart = async (req, res) => {
         const cart = await Cart.findOne({ user: userId })
         if (cart) {
             const existing_prooduct = cart.products.find((p) => {
-                return p.product == productId
+                return p.product == productId._id
+              
             })
             if (existing_prooduct) {
                 existing_prooduct.quantity += 1
@@ -346,119 +345,52 @@ const get_wishlist = async (req, res,next) => {
 
 
 
-// const createOrder = async (req, res,next) => {
-   
-//         const userId = req.user.id;
-//         console.log(userId);
-
-//         const cart = await Cart.findOne({ user: userId }).populate("products.product");
-//         console.log("iiii", cart.products.map(i => i));
-
-//         if (!cart) {
-//             return next(new customeError("cart data not found",404))
-//         }
-
-
-//         console.log('Populated Cart:', JSON.stringify(cart, null, 2));
-
-//         const totalPrice = Math.round(
-//             cart.products.reduce((total, item) => {
-//                 console.log(item);
-
-//                 if (!item.product) {
-//                     console.log('Product is undefined for item:', item);
-//                     throw next (new customeError('Product data not available for one or more items in the cart',404));
-//                 }
-
-
-//                 const price = parseFloat(item.product.price);
-//                 const quantity = parseInt(item.quantity);
-
-//                 console.log('Product ID:', item.product._id);
-//                 console.log('Price:', price);
-//                 console.log('Quantity:', quantity);
-
-//                 if (isNaN(price) || isNaN(quantity)) {
-//                     throw next(new customeError('Invalid product price or quantity',404));
-//                 }
-
-//                 return total + price * quantity;
-//             }, 0)
-//         );
-
-//         console.log('Total Price:', totalPrice);
-
-//         const orderId = new mongoose.Types.ObjectId()
-//         const newOrder = new Order({
-//             userId,
-//             products: cart.products.map((item) => ({
-//                 productId: item.product._id,
-//                 quantity: item.quantity
-//             })),
-//             orderId,
-//             amount: totalPrice,
-//             paymentStatus: "pending"
-//         });
-
-//         const savedOrder = await newOrder.save();
-
-
-//         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
-
-//         return res.status(200).json({
-//             errorcode: 0,
-//             status: true,
-//             message: "Order created successfully",
-//             data: savedOrder
-//         });
-    
-// };
-
-
 const createOrder = async (req, res, next) => {
     try {
+        console.log('User:', req.user);
         const userId = req.user.id;
-        console.log('User ID:', userId);
 
-        // Retrieve the cart for the user
+        if (!userId) {
+            return next(new customeError("User not authenticated", 401));
+        }
+
         const cart = await Cart.findOne({ user: userId }).populate("products.product");
+        console.log('Cart:', cart);
+
         if (!cart) {
             return next(new customeError("Cart data not found", 404));
         }
 
-        console.log('Populated Cart:', JSON.stringify(cart, null, 2));
-
-        // Calculate total price
         const totalPrice = cart.products.reduce((total, item) => {
-            if (!item.product) {
-                console.error('Product is undefined for item:', item);
-                throw new customeError('Product data not available for one or more items in the cart', 404);
-            }
-
             const price = parseFloat(item.product.price);
             const quantity = parseInt(item.quantity);
-
-            if (isNaN(price) || isNaN(quantity)) {
-                throw new customeError('Invalid product price or quantity', 404);
-            }
-
-            console.log('Calculating:', {
-                productId: item.product._id,
-                price: price,
-                quantity: quantity,
-            });
-
             return total + (price * quantity);
         }, 0);
 
-        console.log('Total Price:', totalPrice);
+        const line_items = cart.products.map((item) => ({
+            price_data: {
+                currency: 'inr',
+                product_data: {
+                    name: item.product.name, 
+                    images: [item.product.image], 
+                },
+                unit_amount: Math.round(item.product.price * 100), 
+            },
+            quantity: item.quantity,
+        }));
 
-        // Create a Stripe PaymentIntent
-        const paymentIntent = await stripeClient.paymentIntents.create({
-            amount: Math.round(totalPrice * 100), // Convert to cents
-            currency: 'inr', // Use lowercase for currency
-            payment_method_types: ['card'], // Specify payment method
-            
+        console.log("line_items:", line_items);
+
+        // Create a session Stripe 
+        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+        const session = await stripeClient.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: line_items,
+            mode: 'payment',
+            ui_mode:"embedded",
+            return_url: `${process.env.FRONT_END_URL}/CheckoutSuccess/{CHECKOUT_SESSION_ID}`,
+          
         });
 
         // Create a new order
@@ -468,16 +400,16 @@ const createOrder = async (req, res, next) => {
                 productId: item.product._id,
                 quantity: item.quantity,
             })),
-            orderId: new mongoose.Types.ObjectId(), // Generate a new order ID
+            sessionId: session.id, // Use the session ID created from Stripe
             amount: totalPrice,
-            paymentStatus: "pending", // Set the payment status to pending
-            paymentIntentId: paymentIntent.id, // Save the PaymentIntent ID for reference
+            paymentStatus: "pending",
+            // paymentIntentId is no longer needed since session handles payment
         });
 
-        // Save the new order to the database
         const savedOrder = await newOrder.save();
+        console.log('Saved Order:', savedOrder);
 
-        // Clear the cart after creating the order
+        // Clear the user's cart after successful order creation
         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
 
         return res.status(200).json({
@@ -485,13 +417,15 @@ const createOrder = async (req, res, next) => {
             status: true,
             message: "Order created successfully",
             data: {
+                session:session,
                 order: savedOrder,
-                clientSecret: paymentIntent.client_secret, // Send client secret to the frontend for payment
+                clientSecret: session.client_secret, // Now you can send client_secret if needed
+                lineData: line_items,
             },
         });
     } catch (error) {
         console.error('Error creating order:', error);
-        return next(new customeError(error.message || "An error occurred while creating the order", 500)); // Pass the error to the error handling middleware
+        return next(new customeError(error.message || "An error occurred while creating the order", 500));
     }
 };
 
@@ -500,22 +434,42 @@ const createOrder = async (req, res, next) => {
 
 
 
-const verify_order = async (req, res,next) => {
-   
-        const { orderId } = req.body
-        const order = await Order.findOne({ orderId: orderId })
+const verify_order = async (req, res, next) => {
+    try {
+        const { sessionId } = req.body;
+
+        // Check if orderId is provided
+        if (!sessionId) {
+            return next(new customeError("Order ID is required", 400));
+        }
+
+        // Find the order by orderId
+        const order = await Order.findOne({ sessionId });
         if (!order) {
-            return next(new customeError("order not found",404))
+            return next(new customeError("Order not found", 404));
         }
+
+        // Check payment status
         if (order.paymentStatus === "completed") {
-            return next(new customeError("product already ordered",404))
+            return next(new customeError("Product already ordered", 400));
         }
-        order.paymentStatus = "completed"
-        order.shoppingStatus = "proccessing"
-        const updatedOrder = await order.save()
-        res.status(200).json({ errorcode: 0, status: true, message: "order verified successfully", data: updatedOrder })
-   
-}
+
+        // Update payment and shipping status
+        order.paymentStatus = "completed";
+        order.shoppingStatus = "processing";
+        const updatedOrder = await order.save();
+
+        // Send response back to the frontend
+        res.status(200).json({
+            errorcode: 0,
+            status: true,
+            message: "Order verified successfully",
+            data: updatedOrder
+        });
+    } catch (error) {
+        next(new customeError(error.message || "An error occurred during order verification", 500));
+    }
+};
 
 // get all orders
 
@@ -523,7 +477,10 @@ const getAll_orders = async (req, res,next) => {
    
         const userId = req.user.id;
         console.log(userId);
-        const usersOrder = await Order.find({ userId: userId }).populate("products.productId")
+        const usersOrder = await Order.find({ userId: userId }).populate({
+            path: 'products.productId',
+            model: 'Product', 
+        });
         if (!usersOrder || usersOrder.length === 0) {
             return next(new customeError("orders not found"))
         }
@@ -539,14 +496,15 @@ const getAll_orders = async (req, res,next) => {
 const order_cancelation = async (req, res,next) => {
     
 
-        const Id = req.params.id
-        const orders = await Order.findOne({ orderId: Id })
+        const {id} = req.params
+       
+        const orders = await Order.findOne({ _id: id })
+        
         if (!orders) {
             return next(new customeError("orders not found",404))
         }
-        if (orders.paymentStatus === "completed") {
-            return next(new customeError("can not cancel this order,already paid",404))
-        }
+    
+        
         orders.paymentStatus = "cancelled"
         orders.shoppingStatus = "cancelled"
         await orders.save()
