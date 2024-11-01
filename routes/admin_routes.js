@@ -21,7 +21,7 @@ Router
 .get("/admin/getallproducts",admin_auth,tryCatch(admin_controler.getAll_products))
 .get("/admin/getproductbyid/:id",admin_auth,tryCatch(admin_controler.getProducts_byId))
 .post("/admin/addproduct", admin_auth, upload.single('image'), tryCatch(admin_controler.addProduct))
-.put("/admin/editproduct/:id",admin_auth,tryCatch(admin_controler.editProduct))
+.put("/admin/editproduct/:id",admin_auth, upload.single('image'),tryCatch(admin_controler.editProduct))
 .delete("/admin/deleteproduct/:id",admin_auth,tryCatch(admin_controler.deleteProduct))
 
 

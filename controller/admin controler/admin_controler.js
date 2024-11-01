@@ -116,17 +116,29 @@ const addProduct = async (req, res, next) => {
 
 
 
+
+
 const editProduct = async (req, res, next) => {
 
-    const { error, value } = product_joiSchema.validate(req.body)
-    const updatedproduct = await Products.findByIdAndUpdate(req.params.id, value, { new: true })
-    if (!updatedproduct) {
-        return next(new customeError(error.message))
+    const { _id, __v, ...productData } = req.body;
+
+    const { error, value } = product_joiSchema.validate(productData);
+    console.log("Validation Result:", value);
+         if (error) {
+        return next(new customeError(error));
     }
-    res.status(200).json({ errorCode: 0, message: "product updated successfully", data: updatedproduct })
+        if (req?.file) {
+        value.image = req.file.path;
+    }
+        const updatedProduct = await Products.findByIdAndUpdate(req.params.id, value, { new: true });
+        if (!updatedProduct) {
+        return next(new customeError("Product not found"));
+    }
+     res.status(200).json({ errorCode: 0, message: "Product updated successfully", data: updatedProduct });
+};
 
 
-}
+
 
 
 
@@ -149,14 +161,18 @@ const deleteProduct = async (req, res, next) => {
 
 
 const getAll_orders = async (req, res, next) => {
+    try {
+        const all_orders = await Orders.find().populate('products.productId', 'name price image');
 
-    const all_orders = await Orders.find()
-    if (!all_orders) {
-        return next(new customeError("order not found", 404))
+        if (!all_orders) {
+            return next(new customeError("No orders found", 404));
+        }
+
+        res.status(200).json({ errorCode: 0, data: all_orders });
+    } catch (error) {
+        return next(new customeError(error.message, 500)); // Handle any potential errors
     }
-    res.status(200).json({ errorCode: 0, data: all_orders })
-
-}
+};
 
 
 
@@ -214,10 +230,10 @@ const totalRevanue = async (req, res) => {
     }
 }
 
-const totalProduct=async(req,res)=>{
-    
-    const products=Products.find()
-    if(!products){
+const totalProduct = async (req, res) => {
+
+    const products = Products.find()
+    if (!products) {
         return next(new customeError("products not found"))
     }
     res.status(200).json((await products).length)
