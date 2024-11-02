@@ -170,7 +170,7 @@ const getAll_orders = async (req, res, next) => {
 
         res.status(200).json({ errorCode: 0, data: all_orders });
     } catch (error) {
-        return next(new customeError(error.message, 500)); // Handle any potential errors
+        return next(new customeError(error.message, 500)); 
     }
 };
 

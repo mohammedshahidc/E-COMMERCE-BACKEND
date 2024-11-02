@@ -347,7 +347,7 @@ const get_wishlist = async (req, res,next) => {
 
 const createOrder = async (req, res, next) => {
     try {
-        console.log('User:', req.user);
+        
         const userId = req.user.id;
 
         if (!userId) {
@@ -381,7 +381,7 @@ const createOrder = async (req, res, next) => {
 
         console.log("line_items:", line_items);
 
-        // Create a session Stripe 
+        // Create a session in Stripe 
         const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY)
 
         const session = await stripeClient.checkout.sessions.create({
@@ -400,16 +400,16 @@ const createOrder = async (req, res, next) => {
                 productId: item.product._id,
                 quantity: item.quantity,
             })),
-            sessionId: session.id, // Use the session ID created from Stripe
+            sessionId: session.id, 
             amount: totalPrice,
             paymentStatus: "pending",
-            // paymentIntentId is no longer needed since session handles payment
+           
         });
 
         const savedOrder = await newOrder.save();
-        console.log('Saved Order:', savedOrder);
+       
 
-        // Clear the user's cart after successful order creation
+        
         await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
 
         return res.status(200).json({
@@ -419,7 +419,7 @@ const createOrder = async (req, res, next) => {
             data: {
                 session:session,
                 order: savedOrder,
-                clientSecret: session.client_secret, // Now you can send client_secret if needed
+                clientSecret: session.client_secret, 
                 lineData: line_items,
             },
         });
@@ -438,28 +438,28 @@ const verify_order = async (req, res, next) => {
     try {
         const { sessionId } = req.body;
 
-        // Check if orderId is provided
+      
         if (!sessionId) {
             return next(new customeError("Order ID is required", 400));
         }
 
-        // Find the order by orderId
+       
         const order = await Order.findOne({ sessionId });
         if (!order) {
             return next(new customeError("Order not found", 404));
         }
 
-        // Check payment status
+       
         if (order.paymentStatus === "completed") {
             return next(new customeError("Product already ordered", 400));
         }
 
-        // Update payment and shipping status
+      
         order.paymentStatus = "completed";
         order.shoppingStatus = "processing";
         const updatedOrder = await order.save();
 
-        // Send response back to the frontend
+       
         res.status(200).json({
             errorcode: 0,
             status: true,
