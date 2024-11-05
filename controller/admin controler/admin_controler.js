@@ -120,7 +120,7 @@ const addProduct = async (req, res, next) => {
 
 const editProduct = async (req, res, next) => {
 
-    const { _id, __v, ...productData } = req.body;
+    const { _id, __v,image, ...productData } = req.body;
 
     const { error, value } = product_joiSchema.validate(productData);
     console.log("Validation Result:", value);
@@ -218,17 +218,19 @@ const totalRevanue = async (req, res) => {
                     totalIncome: { $sum: "$amount" }
                 }
             }
-        ])
+        ]);
+        
         if (total_revanue.length > 0) {
-            //   return  console.log("total revanue:",total_revanue[0].totalIncome);
-            return res.status(200).json({ errorCode: 0, toalRevanue: total_revanue[0].totalIncome })
+            const roundedIncome = Math.round(total_revanue[0].totalIncome); 
+             return res.status(200).json({ errorCode: 0, toalRevanue: roundedIncome });
         }
-        res.status(200).json(total_revanue[0].totalIncome)
-    } catch (error) {
-        res.status(400).json({ errorCode: 3, message: error.message })
 
+        res.status(200).json({ toalRevanue: 0 });
+    } catch (error) {
+        res.status(400).json({ errorCode: 3, message: error.message });
     }
 }
+
 
 const totalProduct = async (req, res) => {
 
