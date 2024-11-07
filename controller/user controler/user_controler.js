@@ -172,7 +172,7 @@ const add_toCart = async (req, res) => {
         const cart = await Cart.findOne({ user: userId })
         if (cart) {
             const existing_prooduct = cart.products.find((p) => {
-                return p.product?._id == productId._id
+                return p.product._id == productId
               
             })
             if (existing_prooduct) {
