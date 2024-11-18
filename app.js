@@ -13,7 +13,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: "https://shoe-e-commerce-web-application.vercel.app",
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
