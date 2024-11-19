@@ -16,7 +16,7 @@ app.use(cors({
     origin: "https://shoe-e-commerce-web-application.vercel.app",
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: "GET,PUT,PATCH,POST,DELETE",
+    methods: ["GET","HEAD","PUT","PATCH","POST","DELETE"]
   }));
 
 app.use("/api",user_router)
@@ -35,6 +35,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.all("*",(req,res,next)=>{
     const err = new customeError(`Cannot ${req.method} ${req.originalUrl}`, 404);
      next(err);
+     console.log(err);
 })
 
 

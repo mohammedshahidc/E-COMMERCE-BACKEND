@@ -14,7 +14,7 @@ routes
 .get("/user/productsby/:type",tryCatch(user_controller.getproducts_bycatogory))
 .get("/user/productsById/:id",tryCatch(user_controller.getProduct_ById))
 
-//cart routes
+//cart routes   
 //-----------------------------------------------------------------------------
 
 .post("/user/addtocart",user_auth,tryCatch(user_controller.add_toCart))
